@@ -5,9 +5,17 @@ import logging
 import random
 import paho.mqtt.client as mqtt
 
+from npk_sensor import NPKSensor
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
+
 from Irrigation_Model import IrrigationModel
 from plant_health import PlantHealthModel
+
+# ======================================================
+# CONFIG
+# ======================================================
+USE_SIMULATION = False      # Set to False on Raspberry Pi
+NPK_ENABLED = True       # Enable only if RS485 NPK is connected
 
 # ======================================================
 # LOGGING
@@ -18,11 +26,10 @@ logging.basicConfig(
 )
 
 # ======================================================
-# MQTT SETTINGS (HiveMQ Cloud)
+# MQTT SETTINGS
 # ======================================================
 MQTT_BROKER = "8c70285096fe43429db68ea8e5513422.s1.eu.hivemq.cloud"
 MQTT_PORT = 8883
-
 USERNAME = "hivemq.webclient.1763167024884"
 PASSWORD = "!A5PgmOd1MS$<7z9X#bf"
 
@@ -30,21 +37,25 @@ TOPIC_SENSOR = "agriedge/sensor"
 TOPIC_ADVICE = "agriedge/advice"
 
 # ======================================================
-# SENSOR IMPORTS (UNCOMMENT ON RPI)
+# SENSOR IMPORTS (FOR REAL MODE)
 # ======================================================
-# import adafruit_dht
-# from gpiozero import MCP3008
+if not USE_SIMULATION:
+    import adafruit_dht
+    from gpiozero import MCP3008
+    import board
 
-# dht = adafruit_dht.DHT11(4)
-# soil_adc = MCP3008(channel=0)
-# ldr_adc = MCP3008(channel=1)
+    dht = adafruit_dht.DHT11(board.D4, use_pulseio=False)
+    soil_adc = MCP3008(channel=0)
+    ldr_adc = MCP3008(channel=1)
+
+    if NPK_ENABLED:
+        npk = NPKSensor(port="/dev/ttyS0", slave_id=1)
 
 # ======================================================
 # MQTT CLIENT SETUP
 # ======================================================
 client = mqtt.Client()
 client.username_pw_set(USERNAME, PASSWORD)
-
 client.tls_set(cert_reqs=ssl.CERT_REQUIRED, tls_version=ssl.PROTOCOL_TLSv1_2)
 
 logging.info("Connecting to HiveMQ Cloud...")
@@ -67,7 +78,7 @@ plant_model.train()
 logging.info("Irrigation & Plant Health Models Loaded.")
 
 # ======================================================
-# LOAD LLM MODEL (HUGGINGFACE)
+# LOAD HUGGINGFACE LLM
 # ======================================================
 logging.info("Loading Hugging Face flan-t5-small...")
 
@@ -80,39 +91,47 @@ logging.info("LLM Loaded Successfully.")
 # ======================================================
 # MAIN LOOP
 # ======================================================
-logging.info("System Running... Reading sensors + ML + LLM + MQTT")
+logging.info("System Running...")
 
 while True:
     try:
-        # ----------------------------------------
-        # REAL SENSOR CODE  (ENABLE ON RPI)
-        # ----------------------------------------
-        # temperature = dht.temperature
-        # humidity = dht.humidity
-        #
-        # soil_raw = soil_adc.value * 1023
-        # soil_moisture = round((soil_raw / 1023) * 100, 2)
-        #
-        # ldr_raw = ldr_adc.value * 1023
-        # light = int(ldr_raw)
+        # ---------------------------------------------------
+        # READ SENSORS
+        # ---------------------------------------------------
+        if USE_SIMULATION:
+            # SIMULATED READINGS
+            temperature = round(random.uniform(22, 29), 2)
+            humidity = round(random.uniform(40, 70), 2)
+            soil_moisture = round(random.uniform(10, 75), 2)
+            light = random.randint(200, 900)
+            nitrogen = random.randint(10, 40)
+            phosphorus = random.randint(10, 40)
+            potassium = random.randint(10, 40)
 
-        # ----------------------------------------
-        # SIMULATED VALUES (USE ON LAPTOP)
-        # ----------------------------------------
-        temperature = round(random.uniform(22, 29), 2)
-        humidity = round(random.uniform(40, 70), 2)
-        soil_moisture = round(random.uniform(10, 75), 2)
-        light = random.randint(200, 700)
-        nitrogen = random.randint(10, 30)
-        phosphorus = random.randint(10, 30)
-        potassium = random.randint(10, 30)
+        else:
+            # REAL READINGS
+            temperature = dht.temperature
+            humidity = dht.humidity
 
+            soil_raw = soil_adc.value * 1023
+            soil_moisture = int((soil_raw / 1023) * 100)
+
+            ldr_raw = ldr_adc.value * 1023
+            light = int(ldr_raw)
+
+            if NPK_ENABLED:
+                nitrogen, phosphorus, potassium = npk.read_npk()
+                if nitrogen is None:   # sensor failure fallback
+                    nitrogen, phosphorus, potassium = 20, 15, 18
+            else:
+                nitrogen, phosphorus, potassium = 20, 15, 18
+
+        # ---------------------------------------------------
+        # ML PREDICTIONS
+        # ---------------------------------------------------
         soil_type = "Black Soil"
         stage = "Germination"
 
-        # ---------------------------------------------------
-        # ML PREDICTION
-        # ---------------------------------------------------
         irrigation_pred, moisture_percent = irrigation_model.predict(
             soil_type=soil_type,
             stage=stage,
@@ -135,7 +154,7 @@ while True:
         logging.info(f"Plant Health: {plant_pred}")
 
         # ---------------------------------------------------
-        # BUILD LLM PROMPT
+        # LLM ADVICE
         # ---------------------------------------------------
         prompt = f"""
 You are an agricultural expert AI system.
@@ -152,45 +171,34 @@ Sensor Inputs:
 - Potassium: {potassium}
 
 ML Predictions:
-- Irrigation Needed (0/1): {irrigation_pred}
+- Irrigation Required (0/1): {irrigation_pred}
 - Plant Health: {plant_pred}
 
-Generate detailed guidance:
-1. Is irrigation required? Why?
-2. Explain plant health condition.
-3. Recommended next actions.
-4. Fertilizer/NPK corrections.
-5. Light/shade correction.
-6. Watering schedule.
-7. 3–5 day maintenance plan.
-8. Warning signs to monitor.
-9. Prevention guidelines.
+Generate detailed guidance for irrigation, plant health, NPK balance, shade/light corrections, next 3–5 day care plan, warning signs, and prevention.
 """
 
         inputs = tokenizer(prompt, return_tensors="pt")
         outputs = hf_model.generate(**inputs, max_length=250)
         advice = tokenizer.decode(outputs[0], skip_special_tokens=True)
 
-        logging.info("LLM Advice Generated.")
-
         # ---------------------------------------------------
-        # MQTT PUBLISH SENSOR + PREDICTIONS
+        # MQTT PUBLISH
         # ---------------------------------------------------
         payload = {
-            "temperature": temperature,
-            "humidity": humidity,
-            "moisture": moisture_percent,
-            "light": light,
-            "nitrogen": nitrogen,
-            "phosphorus": phosphorus,
-            "potassium": potassium,
-            "irrigation_prediction": irrigation_pred,
-            "plant_health_prediction": plant_pred,
-            "timestamp": time.time()
+            "temperature": float(temperature),
+            "humidity": float(humidity),
+            "moisture": float(moisture_percent),
+            "light": int(light),
+            "nitrogen": int(nitrogen),
+            "phosphorus": int(phosphorus),
+            "potassium": int(potassium),
+            "irrigation_prediction": int(irrigation_pred),
+            "plant_health_prediction": str(plant_pred),
+            "timestamp": float(time.time())
         }
 
         client.publish(TOPIC_SENSOR, json.dumps(payload))
-        client.publish(TOPIC_ADVICE, advice)
+        client.publish(TOPIC_ADVICE, str(advice))
 
         logging.info("MQTT Published Sensor Data + Advice")
         logging.info("---------------------------")

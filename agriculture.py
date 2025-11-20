@@ -7,6 +7,7 @@ import paho.mqtt.client as mqtt
 
 from npk_sensor import NPKSensor
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
+from sensors_ads import SensorADS
 
 from Irrigation_Model import IrrigationModel
 from plant_health import PlantHealthModel
@@ -14,7 +15,7 @@ from plant_health import PlantHealthModel
 # ======================================================
 # CONFIG
 # ======================================================
-USE_SIMULATION = True      # Set to False on Raspberry Pi
+USE_SIMULATION = False      # Set to False on Raspberry Pi
 NPK_ENABLED = False      # Enable only if RS485 NPK is connected
 
 # ======================================================
@@ -40,13 +41,7 @@ TOPIC_ADVICE = "agriedge/advice"
 # SENSOR IMPORTS (FOR REAL MODE)
 # ======================================================
 if not USE_SIMULATION:
-    import adafruit_dht
-    from gpiozero import MCP3008
-    import board
-
-    dht = adafruit_dht.DHT11(board.D4, use_pulseio=False)
-    soil_adc = MCP3008(channel=0)
-    ldr_adc = MCP3008(channel=1)
+    sensor = SensorADS()   # Use ADS1015 + DHT11
 
     if NPK_ENABLED:
         npk = NPKSensor(port="/dev/ttyS0", slave_id=1)
@@ -109,22 +104,20 @@ while True:
             potassium = random.randint(10, 40)
 
         else:
-            # REAL READINGS
-            temperature = dht.temperature
-            humidity = dht.humidity
+            readings = sensor.read_all()
+            temperature = readings["temperature"]
+            humidity = readings["humidity"]
+            soil_moisture = readings["moi"]          # MOI %
+            light = readings["lux"]                  # LUX value
 
-            soil_raw = soil_adc.value * 1023
-            soil_moisture = int((soil_raw / 1023) * 100)
-
-            ldr_raw = ldr_adc.value * 1023
-            light = int(ldr_raw)
-
+            # NPK stays the same
             if NPK_ENABLED:
                 nitrogen, phosphorus, potassium = npk.read_npk()
-                if nitrogen is None:   # sensor failure fallback
+                if nitrogen is None:
                     nitrogen, phosphorus, potassium = 20, 15, 18
             else:
                 nitrogen, phosphorus, potassium = 20, 15, 18
+            
 
         # ---------------------------------------------------
         # ML PREDICTIONS
@@ -177,9 +170,9 @@ ML Predictions:
 Generate detailed guidance for irrigation, plant health, NPK balance, shade/light corrections, next 3–5 day care plan, warning signs, and prevention.
 """
 
-        inputs = tokenizer(prompt, return_tensors="pt")
-        outputs = hf_model.generate(**inputs, max_length=250)
-        advice = tokenizer.decode(outputs[0], skip_special_tokens=True)
+        #inputs = tokenizer(prompt, return_tensors="pt")
+        #outputs = hf_model.generate(**inputs, max_length=250)
+        #advice = tokenizer.decode(outputs[0], skip_special_tokens=True)
 
         # ---------------------------------------------------
         # MQTT PUBLISH
@@ -198,11 +191,11 @@ Generate detailed guidance for irrigation, plant health, NPK balance, shade/ligh
         }
 
         client.publish(TOPIC_SENSOR, json.dumps(payload))
-        client.publish(TOPIC_ADVICE, str(advice))
+        #client.publish(TOPIC_ADVICE, str(advice))
 
         logging.info("MQTT Published Sensor Data + Advice")
         logging.info("---------------------------")
-        logging.info(advice)
+        #logging.info(advice)
         logging.info("---------------------------")
 
     except Exception as e:

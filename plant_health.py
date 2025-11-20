@@ -3,7 +3,6 @@ import numpy as np
 import joblib
 import logging
 import os
-from openai import OpenAI
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.svm import SVC
 from sklearn.model_selection import train_test_split
