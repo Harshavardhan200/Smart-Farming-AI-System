@@ -1,16 +1,30 @@
-from pathlib import Path
+import os
+from datetime import datetime
+from dotenv import load_dotenv
 
-ROOT = Path(__file__).resolve().parents[1]
+load_dotenv()
+# -----------------------------
+# PROJECT ROOT PATH
+# -----------------------------
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
-DATA_IRRIGATION = ROOT / "data" / "irrigation.csv"
-DATA_PLANT = ROOT / "data" / "plant_health_data.csv"
+DATA_PATH = os.path.join(PROJECT_ROOT, "data")
+MODELS_PATH = os.path.join(PROJECT_ROOT, "models")
 
-MODELS_ROOT = ROOT / "models"
+# -----------------------------
+# MODEL SUB-FOLDERS
+# -----------------------------
+IRRIGATION_MODEL_DIR = os.path.join(MODELS_PATH, "irrigation")
+PLANT_MODEL_DIR = os.path.join(MODELS_PATH, "plant_health")
 
-IRR_MODEL = MODELS_ROOT / "irrigation_model.pkl"
-IRR_SCALER = MODELS_ROOT / "irrigation_scaler.pkl"
-IRR_ENCODERS = MODELS_ROOT / "irrigation_encoders.pkl"
+# GitHub username
+GITHUB_USERNAME = "Harshavardhan200"
 
-PLANT_MODEL = MODELS_ROOT / "plant_health_svm.pkl"
-PLANT_SCALER = MODELS_ROOT / "plant_health_scaler.pkl"
-PLANT_ENCODER = MODELS_ROOT / "plant_health_encoder.pkl"
+# Set from CircleCI variables
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
+
+# -----------------------------
+# TIMESTAMP FOR VERSION FOLDER
+# -----------------------------
+def timestamp():
+    return datetime.now().strftime("%Y-%m-%d_%H-%M-%S")

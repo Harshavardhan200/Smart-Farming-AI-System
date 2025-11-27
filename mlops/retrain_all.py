@@ -1,14 +1,15 @@
-from .train_irrigation import main as train_irrigation
-from .train_plant_health import main as train_plant
+from mlops.train_irrigation import train_irrigation
+from mlops.train_plant_health import train_plant_health
 
-def main():
-    print("=== Retraining Irrigation Model ===")
+def retrain_all():
+    print("\n===============================")
+    print(" 🔁 Retraining BOTH models")
+    print("===============================\n")
+
     train_irrigation()
+    train_plant_health()
 
-    print("=== Retraining Plant Health Model ===")
-    train_plant()
-
-    print("=== ALL MODELS RETRAINED SUCCESSFULLY ===")
+    print("\n🎉 All models retrained successfully!")
 
 if __name__ == "__main__":
-    main()
+    retrain_all()
