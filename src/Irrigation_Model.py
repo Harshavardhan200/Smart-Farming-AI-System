@@ -23,7 +23,7 @@ class IrrigationModel:
     def __init__(
         self,
         dataset="data/irrigation.csv",
-        model_file="models/irrigation_model.pkl"
+        model_file="models/irrigation/irrigation_model.pkl"
     ):
 
         # Compute PROJECT ROOT (one level above src/)
@@ -32,11 +32,11 @@ class IrrigationModel:
         # Construct correct absolute paths
         self.dataset = os.path.join(BASE_DIR, dataset)
         self.model_file = os.path.join(BASE_DIR, model_file)
-        self.scaler_file = os.path.join(BASE_DIR, "models/irrigation_scaler.pkl")
-        self.encoder_file = os.path.join(BASE_DIR, "models/irrigation_encoders.pkl")
+        self.scaler_file = os.path.join(BASE_DIR, "models/irrigation/irrigation_scaler.pkl")
+        self.encoder_file = os.path.join(BASE_DIR, "models/irrigation/irrigation_encoders.pkl")
 
         # Create model directories if missing
-        os.makedirs(os.path.join(BASE_DIR, "models/"), exist_ok=True)
+        os.makedirs(os.path.join(BASE_DIR, "models/irrigation"), exist_ok=True)
 
         self.model = None
         self.scaler = StandardScaler()
@@ -59,7 +59,7 @@ class IrrigationModel:
             if col in df.columns:
                 df = df.drop(columns=[col])
 
-        logging.info(f"Dataset loaded with shape {df.shape}.")
+        # logging.info(f"Dataset loaded with shape {df.shape}.")
         return df
 
     # -----------------------------------------
@@ -104,7 +104,7 @@ class IrrigationModel:
         acc = accuracy_score(y_test, preds)
 
         logging.info(f"Training complete. Accuracy = {acc}")
-        logging.info("\n" + classification_report(y_test, preds))
+        #logging.info("\n" + classification_report(y_test, preds))
 
         # Save model + scaler + encoders
         joblib.dump(self.model, self.model_file)
@@ -143,14 +143,53 @@ class IrrigationModel:
         # Prediction output (0/1)
         pred = self.model.predict(X_scaled)[0]
 
-        logging.info(
+        """logging.info(
             f"Prediction → {pred} for input {data.to_dict(orient='records')}"
-        )
+        )"""
 
         return pred, moi
 
     # -----------------------------------------
     def retrain(self):
         """Retrain model using updated CSV."""
-        logging.info("Retraining started...")
+        # logging.info("Retraining started...")
         return self.train()
+   
+        # -----------------------------------------
+    def train_from_csv(self, path):
+        """Train from any CSV path (used by MLOps)."""
+        self.dataset = path
+        return self.train()
+
+    # -----------------------------------------
+    def save_all(self, base_dir):
+        """Save model, scaler, encoder into /current/ folder."""
+        current_dir = os.path.join(base_dir, "current")
+        os.makedirs(current_dir, exist_ok=True)
+
+        model_out = os.path.join(current_dir, "irrigation_model.pkl")
+        scaler_out = os.path.join(current_dir, "irrigation_scaler.pkl")
+        encoder_out = os.path.join(current_dir, "irrigation_encoders.pkl")
+
+        joblib.dump(self.model, model_out)
+        joblib.dump(self.scaler, scaler_out)
+        joblib.dump(self.encoders, encoder_out)
+
+        return [model_out, scaler_out, encoder_out]
+
+    # -----------------------------------------
+    @staticmethod
+    def load_current():
+        """Load the latest model for inference."""
+        BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        current_path = os.path.join(BASE_DIR, "models/irrigation/current")
+
+        model = joblib.load(os.path.join(current_path, "irrigation_model.pkl"))
+        scaler = joblib.load(os.path.join(current_path, "irrigation_scaler.pkl"))
+        encoders = joblib.load(os.path.join(current_path, "irrigation_encoders.pkl"))
+
+        obj = IrrigationModel()
+        obj.model = model
+        obj.scaler = scaler
+        obj.encoders = encoders
+        return obj

@@ -52,7 +52,7 @@ class PlantHealthModel:
             if col in df.columns:
                 df = df.drop(columns=[col])
 
-        logging.info(f"Dataset loaded with shape {df.shape}.")
+        #logging.info(f"Dataset loaded with shape {df.shape}.")
         return df
 
     # ------------------------------------------------
@@ -89,7 +89,7 @@ class PlantHealthModel:
         acc = accuracy_score(y_test, preds)
 
         logging.info(f"Training complete. Accuracy = {acc}")
-        logging.info("\n" + classification_report(y_test, preds))
+        #logging.info("\n" + classification_report(y_test, preds))
 
         # Save all components
         joblib.dump(self.model, self.model_file)
@@ -131,5 +131,43 @@ class PlantHealthModel:
     # ------------------------------------------------
     def retrain(self):
         """Auto retrain on updated dataset."""
-        logging.info("Retraining started...")
+        #logging.info("Retraining started...")
         return self.train()
+        # ------------------------------------------------
+    def train_from_csv(self, path):
+        """Train from external CSV (used by CI/CD)."""
+        self.dataset = path
+        return self.train()
+
+    # ------------------------------------------------
+    def save_all(self, base_dir):
+        """Save plant health model into /current/ directory."""
+        current_dir = os.path.join(base_dir, "current")
+        os.makedirs(current_dir, exist_ok=True)
+
+        model_out = os.path.join(current_dir, "plant_health_svm.pkl")
+        scaler_out = os.path.join(current_dir, "plant_health_scaler.pkl")
+        encoder_out = os.path.join(current_dir, "plant_health_encoder.pkl")
+
+        joblib.dump(self.model, model_out)
+        joblib.dump(self.scaler, scaler_out)
+        joblib.dump(self.label_encoder, encoder_out)
+
+        return [model_out, scaler_out, encoder_out]
+
+    # ------------------------------------------------
+    @staticmethod
+    def load_current():
+        """Load model for inference on Raspberry Pi."""
+        BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        current_path = os.path.join(BASE_DIR, "models/plant_health/current")
+
+        model = joblib.load(os.path.join(current_path, "plant_health_svm.pkl"))
+        scaler = joblib.load(os.path.join(current_path, "plant_health_scaler.pkl"))
+        encoder = joblib.load(os.path.join(current_path, "plant_health_encoder.pkl"))
+
+        obj = PlantHealthModel()
+        obj.model = model
+        obj.scaler = scaler
+        obj.label_encoder = encoder
+        return obj
