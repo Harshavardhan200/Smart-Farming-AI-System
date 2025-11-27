@@ -6,7 +6,6 @@ jobs:
       - image: cimg/python:3.10
     steps:
       - checkout
-
       - run:
           name: Install Dependencies
           command: |
@@ -14,37 +13,32 @@ jobs:
             pip install -r requirements.txt
 
       - run:
-          name: Sync Repo (Avoid Push Rejections)
+          name: Sync Repo (avoid push rejections)
           command: |
             git config user.email "ci@circleci.com"
             git config user.name "CircleCI Bot"
             git pull --rebase || true
 
       - run:
-          name: Retrain All Models
+          name: Retrain ML models
           command: python3 -m mlops.retrain_all
 
       - run:
-          name: Commit & Push Model Updates
+          name: Push Updated Models
           command: |
             git add models/
             git add data/
-            git commit -m "CircleCI Auto Retrain Update $(date)" || true
+            git commit -m "Auto retrain update $(date)" || true
             git push https://${GITHUB_TOKEN}@github.com/Harshavardhan200/Smart-Farming-AI-System.git || true
 
 workflows:
-  version: 2
   nightly_training:
     triggers:
       - schedule:
-          cron: "0 0 * * *"    # Every midnight
+          cron: "0 0 * * *"
           filters:
             branches:
               only:
                 - main
-    jobs:
-      - retrain
-
-  manual:
     jobs:
       - retrain
