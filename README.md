@@ -204,22 +204,35 @@ This allows new sensor data to be pushed hourly to GitHub for retraining.
 
 ---
 
-## 12. Sensor Wiring
+## 🔌 Sensor Wiring Table
 
-DHT11 / DHT22
-VCC  → 3.3V
-DATA → GPIO4
-GND  → GND
+### 🟦 DHT11 / DHT22 (Temperature & Humidity)
+| Pin on Sensor | Connect To | Notes      |
+|---------------|------------|------------|
+| VCC           | 3.3V       | Power      |
+| DATA          | GPIO4      | Signal pin |
+| GND           | GND        | Ground     |
 
-Soil Moisture Sensor → MCP3008
-Sensor → CH0
-CLK → GPIO11
-DOUT → GPIO9
-DIN → GPIO10
-CS → GPIO8
+---
 
-LDR (Light Sensor)
-LDR → Resistor → MCP3008 CH1
+### 🟫 Soil Moisture Sensor (via MCP3008)
+| Soil Sensor Pin | MCP3008 Pin | Raspberry Pi GPIO | Notes          |
+|------------------|-------------|--------------------|----------------|
+| Analog Out       | CH0         | —                  | Read via ADC   |
+| —                | CLK         | GPIO11             | SPI Clock      |
+| —                | DOUT        | GPIO9              | MISO           |
+| —                | DIN         | GPIO10             | MOSI           |
+| —                | CS          | GPIO8              | Chip Select    |
+
+---
+
+### 🟨 LDR (Light Sensor via MCP3008)
+| Component | Connect To            | Notes              |
+|-----------|------------------------|--------------------|
+| LDR       | Voltage Divider Input  | Forms divider      |
+| Resistor  | Ground                 | 10kΩ recommended   |
+| Output    | MCP3008 CH1            | Analog reading     |
+
 
 ---
 
