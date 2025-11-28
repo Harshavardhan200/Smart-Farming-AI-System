@@ -204,7 +204,12 @@ This allows new sensor data to be pushed hourly to GitHub for retraining.
 
 ---
 
-## 🔌 Sensor Wiring Table
+## 12. Sensor Wiring 
+
+<details>
+<summary><strong>Click to view Wiring Table</strong></summary>
+
+<br>
 
 ### 🟦 DHT11 / DHT22 (Temperature & Humidity)
 | Pin on Sensor | Connect To | Notes      |
@@ -216,23 +221,24 @@ This allows new sensor data to be pushed hourly to GitHub for retraining.
 ---
 
 ### 🟫 Soil Moisture Sensor (via MCP3008)
-| Soil Sensor Pin | MCP3008 Pin | Raspberry Pi GPIO | Notes          |
-|------------------|-------------|--------------------|----------------|
-| Analog Out       | CH0         | —                  | Read via ADC   |
-| —                | CLK         | GPIO11             | SPI Clock      |
-| —                | DOUT        | GPIO9              | MISO           |
-| —                | DIN         | GPIO10             | MOSI           |
-| —                | CS          | GPIO8              | Chip Select    |
+| Soil Sensor Pin | MCP3008 Pin | Raspberry Pi GPIO | Notes        |
+|------------------|-------------|--------------------|--------------|
+| Analog Out       | CH0         | —                  | Analog Read  |
+| —                | CLK         | GPIO11             | SPI Clock    |
+| —                | DOUT        | GPIO9              | MISO         |
+| —                | DIN         | GPIO10             | MOSI         |
+| —                | CS          | GPIO8              | Chip Select  |
 
 ---
 
 ### 🟨 LDR (Light Sensor via MCP3008)
-| Component | Connect To            | Notes              |
-|-----------|------------------------|--------------------|
-| LDR       | Voltage Divider Input  | Forms divider      |
-| Resistor  | Ground                 | 10kΩ recommended   |
-| Output    | MCP3008 CH1            | Analog reading     |
+| Component | Connect To           | Notes             |
+|-----------|-----------------------|-------------------|
+| LDR       | Voltage Divider Input | Light Sensor      |
+| Resistor  | Ground                | 10kΩ recommended  |
+| Output    | MCP3008 CH1           | Analog Reading    |
 
+</details>
 
 ---
 
