@@ -50,23 +50,23 @@ The system is designed for remote agricultural environments where internet conne
 ## 4. Raspberry Pi Setup
 
 Update system:
-
+```bash
 sudo apt update && sudo apt upgrade -y
-
+'''
 Enable SPI and I2C:
-
+```bash
 sudo raspi-config
-
+'''
 Install OS dependencies:
-
+```bash
 sudo apt install -y python3-pip python3-dev python3-full python3-smbus \
 libatlas-base-dev libopenjp2-7 libtiff5 python3-libgpiod
-
+'''
 Install sensor libraries:
-
+```bash
 sudo pip3 install --break-system-packages adafruit-circuitpython-dht
 sudo pip3 install --break-system-packages gpiozero spidev
-
+'''
 ---
 
 ## 5. Python Dependencies
