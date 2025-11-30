@@ -4,89 +4,42 @@ jobs:
   retrain:
     docker:
       - image: cimg/python:3.10
-
     steps:
       - checkout
-
-      # --------------------------
-      # Install Python dependencies
-      # --------------------------
       - run:
           name: Install Dependencies
           command: |
             pip install --upgrade pip
             pip install -r requirements.txt
 
-      # --------------------------
-      # Set Git identity for commits
-      # --------------------------
       - run:
           name: Set Git Identity
           command: |
             git config --global user.email "circleci@smartfarming.ai"
             git config --global user.name "CircleCI Auto Bot"
 
-      # --------------------------
-      # Sync repo cleanly
-      # --------------------------
       - run:
           name: Sync Repo
           command: |
             git fetch --all
             git reset --hard origin/main
 
-      # --------------------------
-      # Run nightly retraining
-      # --------------------------
       - run:
           name: Retrain Models
           command: |
-            echo "===== Running nightly retrain ====="
             python3 -m mlops.retrain_all
 
-      # --------------------------
-      # Show changed files
-      # --------------------------
-      - run:
-          name: Debug Git Status
-          command: |
-            echo "===== Git Status After Retrain ====="
-            git status -s
-            ls -R models/
-
-      # --------------------------
-      # Commit ALL model updates
-      # --------------------------
       - run:
           name: Commit Model Updates
           command: |
-            echo "===== Ensuring folders exist ====="
-            mkdir -p reports
-            mkdir -p mlops
-
-            echo "===== Adding ALL changes (including untracked files) ====="
             git add -A
+            git commit -m "Nightly Auto Retrain: $(date '+%Y-%m-%d %H:%M:%S')" || true
 
-            echo "===== Checking staged changes ====="
-            if git diff --cached --quiet; then
-                echo "⚠ No changes to commit."
-            else
-                echo "===== Committing changes ====="
-                git commit -m "Nightly Auto Retrain: $(date '+%Y-%m-%d %H:%M:%S')"
-            fi
-
-
-      # --------------------------
-      # Push to GitHub USING YOUR USERNAME
-      # --------------------------
       - run:
           name: Push to GitHub
           command: |
-            echo "===== Pushing to GitHub ====="
-            git push https://${GITHUB_TOKEN}@github.com/Harshavardhan200/Smart-Farming-AI-System.git || {
-              echo "⚠ Push failed. Retrying with --force...";
-              git push --force https://${GITHUB_TOKEN}@github.com/Harshavardhan200/Smart-Farming-AI-System.git;
-            }
+            git push https://${GITHUB_TOKEN}@github.com/Harshavardhan200/Smart-Farming-AI-System.git || \
+            git push --force https://${GITHUB_TOKEN}@github.com/Harshavardhan200/Smart-Farming-AI-System.git
 
 workflows:
   nightly_training:
@@ -99,7 +52,3 @@ workflows:
                 - main
     jobs:
       - retrain
-
-  manual_training:
-    jobs:
-      - retrain   
