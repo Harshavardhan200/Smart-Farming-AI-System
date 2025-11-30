@@ -1,10 +1,11 @@
 """
-Utility helpers for model versioning, rollback, and git integration.
+Utility helpers for model versioning, cleanup, reporting, and git integration.
 """
 import os
 import shutil
 import subprocess
 from typing import Optional, List
+from datetime import datetime
 
 from mlops.config import PROJECT_ROOT, timestamp
 
@@ -13,10 +14,7 @@ from mlops.config import PROJECT_ROOT, timestamp
 # VERSION FOLDER HELPERS
 # =========================================
 def create_version_dir(model_dir: str, acc: float) -> str:
-    """Create a version folder like:
-    models/<name>/versions/2025-11-30_23-59-59_acc_0.9523/
-    and return its absolute path.
-    """
+    """Create a version folder with timestamp + accuracy."""
     folder = f"{timestamp()}_acc_{acc:.4f}"
     version_dir = os.path.join(model_dir, "versions", folder)
     os.makedirs(version_dir, exist_ok=True)
@@ -24,20 +22,11 @@ def create_version_dir(model_dir: str, acc: float) -> str:
 
 
 def version_models(model_dir: str, version_dir: str) -> None:
-    """Copy all top-level .pkl files from model_dir into version_dir.
-
-    This will copy, e.g.:
-      models/irrigation/irrigation_model.pkl
-      models/irrigation/irrigation_scaler.pkl
-      models/irrigation/irrigation_encoders.pkl
-    into:
-      models/irrigation/versions/<timestamp_acc_x.xxx>/
-    """
+    """Copy all top-level .pkl files from model_dir into version_dir."""
     os.makedirs(version_dir, exist_ok=True)
 
     for name in os.listdir(model_dir):
         src = os.path.join(model_dir, name)
-        # Only copy top-level .pkl files (skip subfolders like current/ and versions/)
         if os.path.isfile(src) and name.endswith(".pkl"):
             dst = os.path.join(version_dir, name)
             shutil.copy2(src, dst)
@@ -46,80 +35,119 @@ def version_models(model_dir: str, version_dir: str) -> None:
 
 
 def list_versions(model_dir: str) -> List[str]:
-    """Return sorted list of version folder names (not full paths)."""
     versions_root = os.path.join(model_dir, "versions")
     if not os.path.exists(versions_root):
         return []
     return sorted(
-        [d for d in os.listdir(versions_root) if os.path.isdir(os.path.join(versions_root, d))]
+        [d for d in os.listdir(versions_root)
+         if os.path.isdir(os.path.join(versions_root, d))]
     )
 
 
 def latest_version_dir(model_dir: str) -> Optional[str]:
-    """Return absolute path to latest version folder, or None if none exist."""
-    versions_root = os.path.join(model_dir, "versions")
     versions = list_versions(model_dir)
     if not versions:
         return None
-    latest = versions[-1]
-    return os.path.join(versions_root, latest)
+    return os.path.join(model_dir, "versions", versions[-1])
 
 
 def set_current_from_version_dir(model_dir: str, version_dir: str) -> None:
-    """Copy all files from a given version_dir into model_dir/current."""
     current_dir = os.path.join(model_dir, "current")
     os.makedirs(current_dir, exist_ok=True)
     shutil.copytree(version_dir, current_dir, dirs_exist_ok=True)
     print(f"🔁 Updated current model for {model_dir} from {version_dir}")
 
 
+# =========================================
+# ROLLBACK
+# =========================================
 def rollback_to_previous(model_dir: str) -> bool:
-    """Set current/ to the previous (second-latest) version.
-
-    Returns True if rollback happened, False otherwise.
-    """
-    versions_root = os.path.join(model_dir, "versions")
     versions = list_versions(model_dir)
     if len(versions) < 2:
-        print(f"⚠ Not enough versions to rollback in {versions_root}")
+        print(f"⚠ Not enough versions to rollback in {model_dir}")
         return False
 
     prev = versions[-2]
-    src = os.path.join(versions_root, prev)
+    src = os.path.join(model_dir, "versions", prev)
     dst = os.path.join(model_dir, "current")
-    os.makedirs(dst, exist_ok=True)
     shutil.copytree(src, dst, dirs_exist_ok=True)
-    print(f"🔄 Rolled back {model_dir} to version {prev}")
+    print(f"🔄 Rolled back to version {prev}")
     return True
 
 
 # =========================================
-# OPTIONAL: SAFE GIT COMMIT AND PUSH (for local use)
+# AUTO-DELETE OLD VERSIONS
+# =========================================
+def cleanup_old_versions(model_dir: str, keep_last: int = 30) -> None:
+    versions_root = os.path.join(model_dir, "versions")
+    if not os.path.exists(versions_root):
+        return
+
+    versions = sorted(
+        [v for v in os.listdir(versions_root)
+         if os.path.isdir(os.path.join(versions_root, v))]
+    )
+
+    if len(versions) <= keep_last:
+        return
+
+    old_versions = versions[:-keep_last]
+
+    for v in old_versions:
+        path = os.path.join(versions_root, v)
+        shutil.rmtree(path, ignore_errors=True)
+        print(f"🧹 Deleted old version: {path}")
+
+    print(f"✔ Cleanup complete (kept last {keep_last}).")
+
+
+# =========================================
+# NIGHTLY MARKDOWN REPORT
+# =========================================
+def write_nightly_report(
+        prev_irr, irr_acc, irr_version_dir, irr_updated,
+        prev_plant, plant_acc, plant_version_dir, plant_updated
+    ):
+    report_dir = os.path.join(PROJECT_ROOT, "reports")
+    os.makedirs(report_dir, exist_ok=True)
+
+    report_path = os.path.join(report_dir, "nightly_report.md")
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    with open(report_path, "w") as f:
+        f.write(f"# 🌙 Nightly Training Report – {now}\n\n")
+
+        f.write("## Irrigation Model\n")
+        f.write(f"- Previous Accuracy: {prev_irr}\n")
+        f.write(f"- New Accuracy: {irr_acc}\n")
+        f.write(f"- Saved Version: {irr_version_dir}\n")
+        f.write(f"- Current Model Updated? {'✅ Yes' if irr_updated else '❌ No'}\n\n")
+
+        f.write("## Plant Health Model\n")
+        f.write(f"- Previous Accuracy: {prev_plant}\n")
+        f.write(f"- New Accuracy: {plant_acc}\n")
+        f.write(f"- Saved Version: {plant_version_dir}\n")
+        f.write(f"- Current Model Updated? {'✅ Yes' if plant_updated else '❌ No'}\n\n")
+
+        f.write("---\n")
+        f.write("Versions older than 30 were automatically deleted.\n")
+
+    print(f"📝 Nightly report written → {report_path}")
+    return report_path
+
+
+# =========================================
+# OPTIONAL GIT PUSH (NOT USED IN CI)
 # =========================================
 def git_commit_and_push(message: str) -> None:
-    """Commit and push changes using the local git configuration.
-
-    In CI (CircleCI), it's usually better to commit/push from the pipeline
-    config directly. This helper is mostly for manual/local workflows.
-    """
+    """Manual use only."""
     try:
-        # Ensure we are in the project root
         os.chdir(PROJECT_ROOT)
-
-        # Fetch / rebase to avoid simple conflicts
         subprocess.run(["git", "pull", "--rebase"], check=False)
-
-        # Add all relevant changes
         subprocess.run(["git", "add", "models/"], check=False)
         subprocess.run(["git", "add", "mlops/last_metrics.json"], check=False)
-
-        # Commit (no error if there is nothing to commit)
         subprocess.run(["git", "commit", "-m", message], check=False)
-
-        # Push using the default remote
         subprocess.run(["git", "push"], check=False)
-
-        print("⬆ Git commit & push attempted.")
-
+        print("⬆ Git push complete.")
     except Exception as exc:
-        print(f"❌ git_commit_and_push failed: {exc}")
+        print(f"❌ Git push failed: {exc}")
