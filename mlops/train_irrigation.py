@@ -1,26 +1,26 @@
 import os
-from mlops.config import DATA_PATH, IRRIGATION_MODEL_DIR
-from mlops.utils import create_version_dir, version_models, git_commit_and_push
+
+from mlops.config import IRRIGATION_MODEL_DIR
+from mlops.utils import create_version_dir, version_models
 from src.Irrigation_Model import IrrigationModel
 
-def train_irrigation():
 
+def train_irrigation():
+    """Train irrigation model, save a versioned snapshot, and return (acc, version_dir)."""
     print("🌱 Training IRRIGATION model...")
 
-    csv_path = os.path.join(DATA_PATH, "irrigation.csv")
-
     model = IrrigationModel()
-    acc = model.train_from_csv(csv_path)
+    acc = model.train()
 
-    # Save model to "current"
-    model.save_all(IRRIGATION_MODEL_DIR)
+    if acc is None:
+        # Defensive: if training skipped due to empty dataset
+        print("⚠ Irrigation training returned None (possibly empty dataset).")
+        return 0.0, None
 
-    # Save version folder INCLUDING ACCURACY
+    print(f"🌱 Irrigation accuracy: {acc:.4f}")
+
+    # Save a version folder with timestamp + accuracy
     version_dir = create_version_dir(IRRIGATION_MODEL_DIR, acc)
-    version_models(os.path.join(IRRIGATION_MODEL_DIR, "current"), version_dir)
+    version_models(IRRIGATION_MODEL_DIR, version_dir)
 
-    # Push
-    git_commit_and_push(f"Updated irrigation model | acc={acc:.4f}")
-
-    print("✔ IRRIGATION retraining complete.")
-    return acc
+    return acc, version_dir
