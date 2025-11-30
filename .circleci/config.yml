@@ -75,7 +75,6 @@ jobs:
                 git commit -m "Nightly Auto Retrain: $(date '+%Y-%m-%d %H:%M:%S')"
             fi
 
-
       # --------------------------
       # Push to GitHub USING YOUR USERNAME
       # --------------------------
@@ -101,5 +100,8 @@ workflows:
       - retrain
 
   manual_training:
+    triggers:
+      - manual:
+          name: "Run Manual Retrain"
     jobs:
       - retrain
