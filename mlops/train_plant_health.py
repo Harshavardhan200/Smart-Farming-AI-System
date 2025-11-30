@@ -1,6 +1,6 @@
 import os
 from mlops.config import DATA_PATH, PLANT_MODEL_DIR
-from mlops.utils import create_version_dir, version_models, save_current_model, git_commit_and_push
+from mlops.utils import create_version_dir, version_models, git_commit_and_push
 from src.plant_health import PlantHealthModel
 
 def train_plant_health():
@@ -10,19 +10,14 @@ def train_plant_health():
     csv_path = os.path.join(DATA_PATH, "plant_health_data.csv")
 
     model = PlantHealthModel()
-    model.train_from_csv(csv_path)
+    acc = model.train_from_csv(csv_path)
 
-    # Save new model
-    model_files = model.save_all(PLANT_MODEL_DIR)
+    model.save_all(PLANT_MODEL_DIR)
 
-    # Versioning
-    version_dir = create_version_dir(PLANT_MODEL_DIR)
+    version_dir = create_version_dir(PLANT_MODEL_DIR, acc)
     version_models(os.path.join(PLANT_MODEL_DIR, "current"), version_dir)
 
-    # Push to GitHub
-    git_commit_and_push("Updated plant health model")
+    git_commit_and_push(f"Updated plant health model | acc={acc:.4f}")
 
     print("✔ PLANT HEALTH retraining complete.")
-    acc = model.train()
     return acc
-
