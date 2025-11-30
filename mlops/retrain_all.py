@@ -7,7 +7,10 @@ from mlops.utils import (
     write_nightly_report,
 )
 from mlops.config import IRRIGATION_MODEL_DIR, PLANT_MODEL_DIR
-
+import os
+# Ensure directories always exist
+os.makedirs("reports", exist_ok=True)
+os.makedirs("mlops", exist_ok=True)
 
 def retrain_all():
     print("\n===============================")
