@@ -60,21 +60,17 @@ jobs:
       - run:
           name: Commit Model Updates
           command: |
-            echo "===== Staging models ====="
+            echo "===== Staging model versions ====="
             git add models/ -A
-
-            echo "===== Staging metrics file (if exists) ====="
-            if [ -f mlops/last_metrics.json ]; then
-                git add mlops/last_metrics.json
-            else
-                echo "⚠ No metrics file found (no accuracy improvement)."
-            fi
+            git add mlops/last_metrics.json || true
+            git add reports/nightly_report.md || true
 
             if git diff --cached --quiet; then
                 echo "⚠ No changes to commit."
-            else
+            else:
                 git commit -m "Nightly Auto Retrain: $(date '+%Y-%m-%d %H:%M:%S')"
             fi
+
 
       # --------------------------
       # Push to GitHub USING YOUR USERNAME
