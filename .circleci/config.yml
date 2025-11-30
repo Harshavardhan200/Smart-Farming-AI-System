@@ -60,14 +60,18 @@ jobs:
       - run:
           name: Commit Model Updates
           command: |
-            echo "===== Staging model versions ====="
-            git add models/ -A
-            git add mlops/last_metrics.json || true
-            git add reports/nightly_report.md || true
+            echo "===== Ensuring folders exist ====="
+            mkdir -p reports
+            mkdir -p mlops
 
+            echo "===== Adding ALL changes (including untracked files) ====="
+            git add -A
+
+            echo "===== Checking staged changes ====="
             if git diff --cached --quiet; then
                 echo "⚠ No changes to commit."
-            else:
+            else
+                echo "===== Committing changes ====="
                 git commit -m "Nightly Auto Retrain: $(date '+%Y-%m-%d %H:%M:%S')"
             fi
 
