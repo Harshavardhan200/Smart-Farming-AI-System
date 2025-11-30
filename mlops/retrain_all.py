@@ -73,7 +73,8 @@ def retrain_all():
         prev_irr, irr_acc, irr_version_dir, irr_updated,
         prev_plant, plant_acc, plant_version_dir, plant_updated
     )
-retrain_all()
+
     print("\n===============================")
     print(" ✅ NIGHTLY RETRAIN COMPLETE ")
     print("===============================\n")
+retrain_all()
