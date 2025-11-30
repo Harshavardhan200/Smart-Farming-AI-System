@@ -1,37 +1,67 @@
 from mlops.train_irrigation import train_irrigation
 from mlops.train_plant_health import train_plant_health
-from mlops.metrics import load_last_metrics, save_metrics, should_rollback
-from mlops.utils import rollback_irrigation, rollback_plant
+from mlops.metrics import load_last_metrics, save_metrics
+from mlops.utils import set_current_from_version_dir
+from mlops.config import IRRIGATION_MODEL_DIR, PLANT_MODEL_DIR
+
 
 def retrain_all():
-    print("\n=== NIGHTLY RETRAIN START ===")
+    print("\n===============================")
+    print(" 🔁 NIGHTLY RETRAIN START ")
+    print("===============================\n")
 
     last = load_last_metrics()
+    prev_irr = last.get("irrigation_acc", 0.0)
+    prev_plant = last.get("plant_acc", 0.0)
 
-    # Train models
-    irr_acc = train_irrigation()
-    plant_acc = train_plant_health()
+    print(f"Previous Irrigation Acc: {prev_irr}")
+    print(f"Previous Plant Acc: {prev_plant}")
 
-    print(f"Previous Irrigation Acc: {last['irrigation_acc']}, New: {irr_acc}")
-    print(f"Previous Plant Acc: {last['plant_acc']}, New: {plant_acc}")
+    # -------------------------------------------------
+    # Train both models (each saves a new version folder)
+    # -------------------------------------------------
+    irr_acc, irr_version_dir = train_irrigation()
+    plant_acc, plant_version_dir = train_plant_health()
 
-    rolled_back = False
+    print(f"New Irrigation Acc: {irr_acc}")
+    print(f"New Plant Acc: {plant_acc}")
 
-    # Irrigation rollback
-    if should_rollback(last["irrigation_acc"], irr_acc):
-        rollback_irrigation()
-        rolled_back = True
+    # -------------------------------------------------
+    # Decide whether to promote new versions to 'current/'
+    # Rule:
+    #   - Always save versioned models (already done).
+    #   - Only update current/ if accuracy IMPROVES.
+    # -------------------------------------------------
+    new_best_irr = prev_irr
+    new_best_plant = prev_plant
 
-    # Plant Health rollback
-    if should_rollback(last["plant_acc"], plant_acc):
-        rollback_plant()
-        rolled_back = True
+    # Irrigation promotion
+    if irr_version_dir is not None:
+        if irr_acc > prev_irr:
+            print("✅ Irrigation model improved → updating current/")
+            set_current_from_version_dir(IRRIGATION_MODEL_DIR, irr_version_dir)
+            new_best_irr = irr_acc
+        else:
+            print("⚠ Irrigation model did NOT improve → keeping previous current model.")
 
-    # Save new metrics ONLY IF NOT rolled back
-    if not rolled_back:
-        save_metrics(irr_acc, plant_acc)
+    # Plant-health promotion
+    if plant_version_dir is not None:
+        if plant_acc > prev_plant:
+            print("✅ Plant-health model improved → updating current/")
+            set_current_from_version_dir(PLANT_MODEL_DIR, plant_version_dir)
+            new_best_plant = plant_acc
+        else:
+            print("⚠ Plant-health model did NOT improve → keeping previous current model.")
+
+    # -------------------------------------------------
+    # Update metrics ONLY if at least one model improved
+    # -------------------------------------------------
+    if (new_best_irr > prev_irr) or (new_best_plant > prev_plant):
+        save_metrics(new_best_irr, new_best_plant)
         print("✔ Metrics updated with improved accuracies.")
     else:
-        print("⚠️ Rollback applied. Metrics not updated.")
+        print("ℹ No improvements detected → metrics left unchanged.")
 
-    print("=== NIGHTLY RETRAIN COMPLETE ===")
+    print("\n===============================")
+    print(" ✅ NIGHTLY RETRAIN COMPLETE ")
+    print("===============================\n")
