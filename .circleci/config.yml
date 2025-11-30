@@ -45,7 +45,7 @@ workflows:
   nightly_training:
     triggers:
       - schedule:
-          cron: "0 3 * * *"
+          cron: "35 22 * * *"
           filters:
             branches:
               only:
