@@ -29,3 +29,5 @@ timestamp,soil_type,stage,moisture,temp,humidity,light,nitrogen,phosphorus,potas
 2025-12-01 22:15:32,Black Soil,Germination,1.28,27.03,67.84,574,39,13,18,1
 2025-12-01 22:15:43,Black Soil,Germination,1.54,23.98,42.86,755,14,38,12,1
 2025-12-01 22:28:59,Black Soil,Germination,2.41,28.63,54.15,836,19,11,33,1
+2025-12-01 22:29:48,Black Soil,Germination,6.4,23.05,56.6,509,27,14,23,1
+2025-12-01 22:29:58,Black Soil,Germination,4.83,23.98,67.42,356,25,26,13,1
