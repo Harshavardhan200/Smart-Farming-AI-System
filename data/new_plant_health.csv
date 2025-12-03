@@ -1,21 +1,11 @@
-timestamp,soil_type,stage,moisture,temp,humidity,light,nitrogen,phosphorus,potassium,plant_pred
-2025-12-02 19:21:16,Black Soil,Germination,9.78,21.0,11,983.15,20,15,18,High Stress
-2025-12-02 19:21:27,Black Soil,Germination,9.78,21.0,11,983.67,20,15,18,High Stress
-2025-12-02 19:21:37,Black Soil,Germination,9.78,21.0,11,982.64,20,15,18,High Stress
-2025-12-02 19:21:48,Black Soil,Germination,9.78,21.0,11,983.67,20,15,18,High Stress
-2025-12-02 19:21:58,Black Soil,Germination,9.78,21.0,11,983.41,20,15,18,High Stress
-2025-12-02 19:22:09,Black Soil,Germination,9.78,21.0,11,983.54,20,15,18,High Stress
-2025-12-02 19:22:19,Black Soil,Germination,9.78,21.0,11,983.67,20,15,18,High Stress
-2025-12-02 19:22:30,Black Soil,Germination,9.78,21.0,11,985.34,20,15,18,High Stress
-2025-12-02 19:22:40,Black Soil,Germination,9.78,21.0,11,983.92,20,15,18,High Stress
-2025-12-02 19:22:50,Black Soil,Germination,9.78,21.0,11,983.28,20,15,18,High Stress
-2025-12-02 19:23:04,Black Soil,Germination,9.78,21.0,11,985.08,20,15,18,High Stress
-2025-12-02 19:23:14,Black Soil,Germination,9.78,21.0,11,986.5,20,15,18,High Stress
-2025-12-02 19:23:25,Black Soil,Germination,9.78,21.0,11,971.01,20,15,18,High Stress
-2025-12-02 19:23:35,Black Soil,Germination,9.78,21.0,11,962.41,20,15,18,High Stress
-2025-12-02 19:23:46,Black Soil,Germination,9.78,21.0,11,976.49,20,15,18,High Stress
-2025-12-02 19:23:56,Black Soil,Germination,9.78,21.0,11,977.38,20,15,18,High Stress
-2025-12-02 19:24:06,Black Soil,Germination,9.78,21.0,11,976.23,20,15,18,High Stress
-2025-12-02 19:24:17,Black Soil,Germination,9.78,21.0,11,976.1,20,15,18,High Stress
-2025-12-02 19:24:27,Black Soil,Germination,9.78,21.0,11,974.7,20,15,18,High Stress
-2025-12-02 19:24:38,Black Soil,Germination,9.78,21.0,11,974.44,20,15,18,High Stress
+timestamp,Soil_Moisture,Ambient_Temperature,Humidity,Light_Intensity,Nitrogen_Level,Phosphorus_Level,Potassium_Level,Plant_Health_Status
+2025-12-02 19:56:05,10.0,21.0,11,978.92,20,15,18,High Stress
+2025-12-02 19:56:16,10.0,21.0,11,981.1,20,15,18,High Stress
+2025-12-02 19:56:26,10.0,21.0,11,979.43,20,15,18,High Stress
+2025-12-02 19:56:37,10.0,21.0,11,962.66,20,15,18,High Stress
+2025-12-02 19:56:47,10.0,21.0,11,980.46,20,15,18,High Stress
+2025-12-02 19:56:58,10.0,21.0,11,979.94,20,15,18,High Stress
+2025-12-02 19:57:08,10.0,21.0,11,981.1,20,15,18,High Stress
+2025-12-02 19:57:19,10.0,21.0,11,977.51,20,15,18,High Stress
+2025-12-02 19:57:29,10.0,21.0,11,944.82,20,15,18,High Stress
+2025-12-02 19:57:39,10.0,21.0,11,971.52,20,15,18,High Stress
